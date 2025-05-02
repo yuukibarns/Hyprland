@@ -1882,6 +1882,7 @@ SDispatchResult CKeybindManager::moveCursorToCorner(std::string arg) {
 
 SDispatchResult CKeybindManager::moveCursor(std::string args) {
     std::string x_str, y_str;
+    bool        x_relative = false, y_relative = false;
     int         x, y;
 
     size_t      i = args.find_first_of(' ');
@@ -1893,17 +1894,42 @@ SDispatchResult CKeybindManager::moveCursor(std::string args) {
     x_str = args.substr(0, i);
     y_str = args.substr(i + 1);
 
-    if (!isNumber(x_str)) {
+    if (x_str.starts_with("+") || x_str.starts_with("-")) {
+        x_relative = true;
+
+        if (!isNumber(x_str.substr(1))) {
+            Debug::log(ERR, "moveCursor, x argument has to be a number.");
+            return {.success = false, .error = "moveCursor, x argument has to be a number."};
+        }
+    } else if (!isNumber(x_str)) {
         Debug::log(ERR, "moveCursor, x argument has to be a number.");
         return {.success = false, .error = "moveCursor, x argument has to be a number."};
     }
-    if (!isNumber(y_str)) {
+
+    if (y_str.starts_with("+") || y_str.starts_with("-")) {
+        y_relative = true;
+
+        if (!isNumber(y_str.substr(1))) {
+            Debug::log(ERR, "moveCursor, y argument has to be a number.");
+            return {.success = false, .error = "moveCursor, y argument has to be a number."};
+        }
+    } else if (!isNumber(y_str)) {
         Debug::log(ERR, "moveCursor, y argument has to be a number.");
         return {.success = false, .error = "moveCursor, y argument has to be a number."};
     }
 
-    x = std::stoi(x_str);
-    y = std::stoi(y_str);
+    // Handle relative motion (e.g., "+10" or "-5")
+    if (x_relative) {
+        x = g_pPointerManager->position().x + std::stoi(x_str);
+    } else {
+        x = std::stoi(x_str);
+    }
+
+    if (y_relative) {
+        y = g_pPointerManager->position().y + std::stoi(y_str);
+    } else {
+        y = std::stoi(y_str);
+    }
 
     g_pCompositor->warpCursorTo({x, y}, true);
 
